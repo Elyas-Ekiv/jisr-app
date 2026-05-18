@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap');
+
+/* Arabic – The Year of Handicrafts */
+@font-face {
+  font-family: 'The Year of Handicrafts';
+  src: url('/fonts/ArbFONTS-TheYearofHandicrafts-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Year of Handicrafts';
+  src: url('/fonts/ArbFONTS-TheYearofHandicrafts-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    /* Jisr brand tokens (used by non-Tailwind styles when needed) */
+    --jisr-primary: #185A8D; /* banners/headers */
+    --jisr-accent: #EF4545; /* CTAs */
+    --jisr-text: #231F20;
+    --jisr-surface: #F1F2F2;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.dark body {
+    @apply bg-ink-900 text-ink-100;
+  }
+
+  html.dark h1,
+  html.dark h2,
+  html.dark h3,
+  html.dark h4,
+  html.dark h5,
+  html.dark h6 {
+    @apply text-ink-50;
+  }
+
+  /* ── Font-size scaling via data-font-size on <html> ─────────────────────
+     All Tailwind rem values scale proportionally since rem is relative to
+     the root element font-size. Breakpoints are px-based so layout is safe. */
+  html[data-font-size='small']       { font-size: 14px; }
+  html[data-font-size='comfortable'] { font-size: 16px; }
+  html[data-font-size='large']       { font-size: 18px; }
+  html[data-font-size='extra-large'] { font-size: 20px; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-brand-surface text-ink-900;
+    font-family: 'Montserrat', 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'cv01';
+    letter-spacing: 0.012em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight text-ink-900;
+    font-family: 'Dela Gothic One', 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+    font-weight: 400; /* Dela Gothic One is a display face — weight is baked in */
+  }
+
+  h1 { letter-spacing: -0.02em; }
+  h2 { letter-spacing: -0.018em; }
+  h3 { letter-spacing: -0.012em; }
+
+  /* Arabic / RTL — The Year of Handicrafts for all text */
+  [dir='rtl'] body,
+  [dir='rtl'] p,
+  [dir='rtl'] span,
+  [dir='rtl'] li,
+  [dir='rtl'] label,
+  [dir='rtl'] input,
+  [dir='rtl'] textarea,
+  [dir='rtl'] select,
+  [lang='ar'],
+  .arabic {
+    font-family: 'The Year of Handicrafts', 'Tajawal', 'Cairo', sans-serif;
+    font-weight: 400;
+  }
+
+  /* Arabic headings — bold weight */
+  [dir='rtl'] h1,
+  [dir='rtl'] h2,
+  [dir='rtl'] h3,
+  [dir='rtl'] h4,
+  [dir='rtl'] h5,
+  [dir='rtl'] h6 {
+    font-family: 'The Year of Handicrafts', 'Tajawal', 'Cairo', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0; /* Arabic doesn't use negative letter-spacing */
+  }
+
+  /* Focus ring */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white rounded-lg;
+  }
+
+  html.dark *:focus-visible {
+    @apply ring-offset-ink-900;
+  }
+
+  ::selection {
+    @apply bg-primary-200 text-primary-900;
+  }
+
+  /* Scrollbar — light */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply bg-ink-200 rounded-full;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-300;
+  }
+
+  /* Scrollbar — dark */
+  html.dark *::-webkit-scrollbar-thumb {
+    @apply bg-ink-600;
+  }
+  html.dark *::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-500;
+  }
+}
+
+@layer components {
+  /* Surface card — dark-mode aware */
+  .surface {
+    @apply bg-white rounded-2xl border border-ink-100 shadow-soft
+           dark:bg-ink-800 dark:border-ink-700;
+  }
+
+  .surface-elevated {
+    @apply bg-white rounded-2xl border border-ink-100 shadow-card
+           dark:bg-ink-800 dark:border-ink-700;
+  }
+
+  /* Soft chip / tag */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .chip-primary {
+    @apply chip bg-primary-50 text-primary-700 ring-1 ring-primary-200
+           dark:bg-primary-900/30 dark:text-primary-300 dark:ring-primary-700;
+  }
+
+  .chip-accent {
+    @apply chip bg-accent-50 text-accent-700 ring-1 ring-accent-200
+           dark:bg-accent-900/30 dark:text-accent-300 dark:ring-accent-700;
+  }
+
+  .chip-sunny {
+    @apply chip bg-sunny-50 text-sunny-800 ring-1 ring-sunny-200
+           dark:bg-sunny-900/30 dark:text-sunny-300 dark:ring-sunny-700;
+  }
+
+  .chip-sky {
+    @apply chip bg-sky-50 text-sky-700 ring-1 ring-sky-200
+           dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-700;
+  }
+
+  .chip-ink {
+    @apply chip bg-ink-100 text-ink-700
+           dark:bg-ink-700 dark:text-ink-200;
+  }
+
+  /* Section header label (eyebrow) */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-700
+           dark:text-primary-400;
+  }
+
+  /* Page container */
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Form input wrapper */
+  .field {
+    @apply block w-full;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-ink-900
+           placeholder:text-ink-400 transition-all duration-150
+           hover:border-ink-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none
+           dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:placeholder:text-ink-500
+           dark:hover:border-ink-500 dark:focus:ring-primary-900/40 dark:focus:border-primary-400;
+  }
+
+  .field-input-error {
+    @apply border-accent-400 focus:border-accent-500 focus:ring-accent-100
+           dark:border-accent-500 dark:focus:ring-accent-900/40;
+  }
+}
+
+@layer utilities {
+  /* Brand gradients */
+  .gradient-brand {
+    background-image: linear-gradient(135deg, #185A8D 0%, #134a74 100%);
+  }
+
+  .gradient-brand-soft {
+    background-image: linear-gradient(135deg, #f3f5f9 0%, #e7ebf3 100%);
+  }
+
+  .gradient-aurora {
+    background-image: radial-gradient(at 0% 0%, rgba(24, 90, 141, 0.18) 0, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(239, 69, 69, 0.18) 0, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(33, 165, 255, 0.18) 0, transparent 50%);
+  }
+
+  .gradient-sunset {
+    background-image: linear-gradient(135deg, #EF4545 0%, #f99c07 100%);
+  }
+
+  .gradient-ocean {
+    background-image: linear-gradient(135deg, #0a85f0 0%, #185A8D 100%);
+  }
+
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #185A8D 0%, #21a5ff 100%);
+  }
+
+  /* Accessibility helpers */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply rounded-md bg-gradient-to-r from-ink-100 via-ink-200 to-ink-100
+           dark:from-ink-700 dark:via-ink-600 dark:to-ink-700;
+    background-size: 936px 100%;
+    @apply animate-shimmer;
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
