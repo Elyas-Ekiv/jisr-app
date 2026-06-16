@@ -1,0 +1,5 @@
+# Node Version Manager
+# Specifies the Node.js version for backend
+# Use: nvm install && nvm use
+
+18.18.0

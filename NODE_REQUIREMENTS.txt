@@ -1,0 +1,213 @@
+################################################################################
+# NODE.JS DEPLOYMENT REQUIREMENTS FOR CPANEL
+# Production-Grade Dependencies & Configuration
+# Updated: May 2026
+################################################################################
+
+=== CORE NODE.JS VERSION ===
+Node.js: v18.18.0 or v20.10.0 (LTS)
+npm: v9.8.1 or v10.2.3
+npm ci (Recommended for production - uses package-lock.json)
+
+=== RUNTIME ENVIRONMENT ===
+- Use Node.js via cPanel's Node.js Selector (if available)
+- Or use .npmrc for custom configurations
+- Set NODE_ENV=production before deployment
+
+=== FRONTEND DEPENDENCIES (package.json) ===
+Core:
+  react@18.2.0
+  react-dom@18.2.0
+  react-router-dom@6.20.0
+  framer-motion@10.16.4
+  lucide-react@0.294.0
+
+Dev:
+  vite@5.0.0
+  typescript@5.2.2
+  tailwindcss@3.3.5
+  autoprefixer@10.4.16
+  postcss@8.4.31
+  eslint@8.53.0
+  @types/react@18.2.37
+  @types/react-dom@18.2.15
+  @typescript-eslint/eslint-plugin@6.10.0
+  @typescript-eslint/parser@6.10.0
+  @vitejs/plugin-react@4.2.0
+  eslint-plugin-react-hooks@4.6.0
+  eslint-plugin-react-refresh@0.4.4
+
+=== BACKEND DEPENDENCIES (backend/package.json) ===
+Core:
+  express@4.18.2
+  @prisma/client@5.7.1
+  dotenv@16.3.1
+  bcryptjs@2.4.3
+  jsonwebtoken@9.0.2
+  cors@2.8.5
+  helmet@7.1.0
+  express-validator@7.0.1
+  express-rate-limit@7.1.4
+  multer@2.1.1 (File uploads)
+  sharp@0.34.5 (Image optimization)
+  axios@1.6.2 (HTTP client)
+  resend@6.12.3 (Email service)
+  zod@3.22.4 (Schema validation)
+  node-cron@4.2.1 (Scheduled tasks)
+
+Dev:
+  prisma@5.7.1
+  nodemon@3.0.2
+  typescript@5.3.3
+  ts-node@10.9.2
+  @types/express@4.17.21
+  @types/node@20.10.5
+  @types/bcryptjs@2.4.6
+  @types/cors@2.8.17
+  @types/jsonwebtoken@9.0.5
+
+=== SYSTEM REQUIREMENTS ===
+- Free disk space: Minimum 2GB for node_modules
+- Memory: 512MB-1GB RAM minimum
+- Database: PostgreSQL 12+ (Prisma requirement)
+- Max file upload size: Configure in:
+  - Express middleware: app.use(express.json({ limit: '50mb' }))
+  - multer: limits: { fileSize: 50 * 1024 * 1024 }
+
+=== DATABASE CONFIGURATION ===
+- PostgreSQL connection required
+- Prisma ORM configuration in: backend/prisma/schema.prisma
+- Setup DATABASE_URL in .env:
+  DATABASE_URL="postgresql://user:password@host:5432/jisr_db"
+- Run migrations: npm run prisma:migrate (before first deployment)
+- Seed database: npm run prisma:seed (optional)
+
+=== ENVIRONMENT VARIABLES (.env) ===
+REQUIRED:
+
+Frontend:
+  VITE_API_BASE_URL=https://your-api-domain.com/api
+
+Backend:
+  NODE_ENV=production
+  DATABASE_URL=postgresql://user:password@host:5432/jisr_db
+  JWT_SECRET=your-secure-jwt-secret-32-chars-min
+  JWT_EXPIRE=7d
+  PORT=3000
+  UPLOAD_DIR=uploads/media
+  MAX_FILE_SIZE=50mb
+  
+  # Email Service (Resend)
+  RESEND_API_KEY=your-resend-api-key
+  FROM_EMAIL=noreply@yourdomain.com
+  
+  # Payment Gateway (Thawani)
+  THAWANI_API_KEY=your-thawani-api-key
+  THAWANI_SECRET_KEY=your-thawani-secret-key
+  THAWANI_PUBLIC_KEY=your-thawani-public-key
+  
+  CORS_ORIGIN=https://your-domain.com
+
+OPTIONAL:
+  LOG_LEVEL=info
+  RATE_LIMIT_WINDOW=15
+  RATE_LIMIT_MAX_REQUESTS=100
+  CACHE_TTL=3600
+
+=== CPANEL DEPLOYMENT STEPS ===
+
+1. File Upload:
+   - Upload project files via FTP/SFTP
+   - Exclude: node_modules/, dist/, uploads/media/, .env, .git/
+   - Include: package.json, package-lock.json, .gitignore, .env.example
+
+2. Install Dependencies:
+   cd /path/to/project
+   npm ci (use 'ci' instead of 'install' for production)
+
+3. Frontend Build:
+   npm run build
+   (This creates dist/ folder with optimized static files)
+
+4. Backend Setup:
+   cd backend
+   npm ci
+   npm run prisma:generate
+   npm run prisma:migrate
+   npm run build
+
+5. Environment Setup:
+   - Create .env in root with frontend config
+   - Create backend/.env with backend config
+   - Ensure .env files are NOT in version control
+
+6. Service Configuration:
+   - Use cPanel's Node.js app to manage backend process
+   - Or use PM2 for process management:
+     npm install -g pm2
+     pm2 start backend/dist/server.js --name "jisr-backend"
+     pm2 save
+
+7. Reverse Proxy Setup (if needed):
+   - Configure Apache/Nginx to proxy requests to Node.js backend
+   - Frontend serves from dist/ (static files)
+   - Backend API proxied to Node.js process
+
+8. SSL Certificate:
+   - Enable AutoSSL in cPanel
+   - Use certbot if manual setup needed
+   - Ensure HTTPS for payment gateway
+
+=== SECURITY CONSIDERATIONS ===
+- Set appropriate file permissions: 755 for folders, 644 for files
+- Keep .env files outside web root
+- Use strong JWT_SECRET (minimum 32 characters)
+- Enable helmet middleware for security headers
+- Configure CORS properly for production domain
+- Rate limiting enabled (express-rate-limit)
+- Validate all inputs (express-validator)
+- Hash passwords with bcryptjs (10 rounds minimum)
+
+=== PERFORMANCE OPTIMIZATION ===
+- Enable gzip compression in Express
+- Use sharp for image optimization
+- Implement database indexing in Prisma
+- Cache static files with 1 year expiry
+- Use CDN for media files if possible
+- Enable clustering/worker processes
+
+=== MAINTENANCE & MONITORING ===
+- Regular database backups (PostgreSQL)
+- Monitor disk space for uploads/
+- Check Node.js logs: .../logs/
+- Monitor PM2 process: pm2 monit
+- Regular security updates: npm audit fix
+- Database migrations on updates
+
+=== BUILD COMMANDS ===
+Frontend:
+  npm run build        # Production build (creates dist/)
+  npm run lint         # Check code quality
+
+Backend:
+  npm run build        # Compile TypeScript to JavaScript
+  npm run prisma:generate  # Generate Prisma client
+  npm run start        # Start production server
+
+Combined Deploy:
+  npm run build && cd backend && npm run build && npm start
+
+=== TROUBLESHOOTING ===
+- Module not found: Run npm ci and npm run prisma:generate
+- Port already in use: Change PORT in .env
+- Database connection error: Verify DATABASE_URL and PostgreSQL running
+- File upload fails: Check UPLOAD_DIR permissions and MAX_FILE_SIZE
+- Payment gateway error: Verify Thawani keys in .env
+
+################################################################################
+# For more details, refer to:
+# Frontend: package.json
+# Backend: backend/package.json
+# Database: backend/prisma/schema.prisma
+# Configuration: backend/src/config/
+################################################################################

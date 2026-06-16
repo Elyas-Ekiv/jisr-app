@@ -1,0 +1,519 @@
+// Prisma Schema for Jisr AAC Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  role          UserRole @default(USER)
+  accountType   String? // "parent", "admin", etc.
+  emailVerified Boolean  @default(false)
+  blocked       Boolean  @default(false)
+  restrictions  String[] @default([])
+  /// Security question chosen at signup (for password recovery without email OTP)
+  recoveryQuestion   String?
+  recoveryAnswerHash String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  children      Child[]
+  vocabulary    Vocabulary[]
+  orders        Order[]
+  payments      Payment[]
+  refreshTokens RefreshToken[]
+  settings      UserSettings?
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+  supportTickets SupportTicket[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// Child Model
+model Child {
+  id        String   @id @default(cuid())
+  name      String
+  username  String?  @unique
+  pin       String?  // hashed 4-digit PIN for child login
+  age       Int?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  vocabulary   ChildVocabulary[]
+  settings     AACSettings?
+  analytics    UsageAnalytics[]
+  activityLogs ActivityLog[]
+  locations    Location[]
+
+  @@index([userId])
+  @@index([username])
+  @@map("children")
+}
+
+// Vocabulary Model
+model Vocabulary {
+  id        String          @id @default(cuid())
+  // null = global card (admin-created, visible to all); set = private card owned by that user
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      Json // { en: "Hello", ar: "مرحبا" }
+  category  String
+  level     VocabularyLevel @default(BASIC)
+  imageUrl  String?
+  audioUrl  String?
+  locations String[]        @default([]) // Location IDs this card is pinned to; empty = show everywhere
+  order     Int             @default(0)
+  enabled   Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relations
+  childVocab ChildVocabulary[]
+
+  @@index([userId])
+  @@map("vocabulary")
+}
+
+// Child Vocabulary Junction Table
+model ChildVocabulary {
+  id           String     @id @default(cuid())
+  childId      String
+  vocabularyId String
+  child        Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  vocabulary   Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([childId, vocabularyId])
+  @@index([childId])
+  @@map("child_vocabulary")
+}
+
+// AAC Settings Model
+model AACSettings {
+  id                String          @id @default(cuid())
+  childId           String          @unique
+  child             Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  primaryLanguage   String          @default("en")
+  secondaryLanguage String?
+  voiceType         String          @default("child")
+  speechSpeed       Float           @default(0.8)
+  volume            Float           @default(1.0)
+  maxSentenceLength Int             @default(10)
+  visibleImageCount Int             @default(0)
+  vocabularyLevel   VocabularyLevel @default(BASIC)
+  speechMode        SpeechMode      @default(SENTENCE)
+  gridColumns       Int             @default(4)
+  cardSize          String          @default("medium")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@map("aac_settings")
+}
+
+// Usage Analytics Model
+model UsageAnalytics {
+  id            String   @id @default(cuid())
+  childId       String
+  child         Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  vocabularyIds String[] // Array of vocabulary IDs used
+  sentence      String?
+  timestamp     DateTime @default(now())
+
+  @@index([childId])
+  @@index([timestamp])
+  @@map("usage_analytics")
+}
+
+// Location Model
+model Location {
+  id         String   @id @default(cuid())
+  childId    String
+  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  name       String
+  type       String   @default("home")
+  icon       String   @default("🏠")
+  color      String   @default("from-blue-400 to-blue-600")
+  categories Json     // Array of { category: string, enabled: boolean }
+  enabled    Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([childId, name])
+  @@index([childId])
+  @@map("locations")
+}
+
+// Payment Plan Model
+model PaymentPlan {
+  id          String   @id @default(cuid())
+  name        String
+  nameAr      String?
+  price       Float
+  period      String // "month" or "year"
+  description String?
+  descriptionAr String?
+  features    String[] // Array of feature strings
+  popular     Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  orders Order[]
+
+  @@map("payment_plans")
+}
+
+// Discount Model
+model Discount {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  type        DiscountType @default(PERCENTAGE)
+  value       Float
+  description String?
+  validFrom   DateTime
+  validTo     DateTime
+  maxUses     Int?
+  currentUses Int          @default(0)
+  enabled     Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  orders Order[]
+
+  @@map("discounts")
+}
+
+// Order Model
+model Order {
+  id               String      @id @default(cuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  planId           String
+  plan             PaymentPlan @relation(fields: [planId], references: [id])
+  discountId       String?
+  discount         Discount?   @relation(fields: [discountId], references: [id])
+  amount           Float
+  status           OrderStatus @default(PENDING)
+  thawaniSessionId String?     @unique // Thawani session ID
+  orderReference   String      @unique @default(cuid()) // Unique order reference
+  dueDate          DateTime?   // Payment deadline; used by the Nudge Engine for reminder emails
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([thawaniSessionId])
+  @@index([dueDate])
+  @@map("orders")
+}
+
+// Payment Model
+model Payment {
+  id               String        @id @default(cuid())
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id])
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  amount           Float
+  currency         String        @default("OMR")
+  status           PaymentStatus @default(PENDING)
+  thawaniPaymentId String?       @unique // Thawani payment ID
+  thawaniSessionId String? // Thawani session ID
+  paymentMethod    String?
+  transactionId    String?       @unique
+  metadata         Json? // Additional payment data
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([thawaniPaymentId])
+  @@map("payments")
+}
+
+// Refresh Token Model
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// User Settings Model
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language        String   @default("en")
+  theme           String   @default("light")
+  soundEffects    Boolean  @default(true)
+  backgroundMusic Boolean  @default(false)
+  contrast        String   @default("normal") // "normal", "high", "maximum"
+  gridView        Boolean  @default(true)
+  fontSize        String   @default("medium") // "small", "medium", "large", "extra-large"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+// Notification Model
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  read      Boolean          @default(false)
+  link      String? // Optional link to related page
+  metadata  Json? // Additional data
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Activity Log Model
+model ActivityLog {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  childId     String? // Optional - if activity is related to a child
+  child       Child?       @relation(fields: [childId], references: [id], onDelete: Cascade)
+  type        ActivityType
+  title       String
+  description String?
+  metadata    Json? // Additional data (e.g., vocabulary ID, settings changed, etc.)
+  createdAt   DateTime     @default(now())
+
+  @@index([userId])
+  @@index([childId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// Blog Post Model
+model BlogPost {
+  id              String       @id @default(cuid())
+  slug            String       @unique
+  title           String
+  titleAr         String?
+  excerpt         String
+  excerptAr       String?
+  content         String
+  contentAr       String?
+  category        String       @default("Guide")
+  status          BlogStatus   @default(DRAFT)
+  featured        Boolean      @default(false)
+  showOnHomepage  Boolean      @default(false)
+  emoji           String?      @default("📝")
+  coverImageUrl   String?
+  authorName      String       @default("Jisr Team")
+  views           Int          @default(0)
+  publishedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([status])
+  @@index([featured])
+  @@index([publishedAt])
+  @@map("blog_posts")
+}
+
+// Site Settings Model (key-value store for website customization)
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("site_settings")
+}
+
+// Support Ticket Model
+model SupportTicket {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     String
+  category    TicketCategory
+  priority    TicketPriority    @default(MEDIUM)
+  status      TicketStatus      @default(PENDING)
+  description String
+  messages    SupportMessage[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+// Support Message Model
+model SupportMessage {
+  id        String       @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String? // null for admin/staff messages
+  message   String
+  isFromUser Boolean     @default(true) // true if from user, false if from support
+  createdAt DateTime     @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("support_messages")
+}
+
+// Media Library Model
+model MediaAsset {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  url          String
+  mimeType     String
+  size         Int
+  category     String   @default("general")
+  tags         String[] @default([])
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("media_assets")
+}
+
+// Customer Reviews Model
+model Review {
+  id        String   @id @default(cuid())
+  name      String
+  nameAr    String?
+  role      String
+  roleAr    String?
+  quote     String
+  quoteAr   String?
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum VocabularyLevel {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SpeechMode {
+  INSTANT
+  SENTENCE
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum NotificationType {
+  SUCCESS
+  INFO
+  WARNING
+  ERROR
+}
+
+enum ActivityType {
+  VOCABULARY_ADDED
+  VOCABULARY_UPDATED
+  VOCABULARY_DELETED
+  SETTINGS_UPDATED
+  CHILD_CREATED
+  CHILD_UPDATED
+  USAGE_RECORDED
+  CATEGORY_CREATED
+  OTHER
+}
+
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  QUESTION
+  FEATURE
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
