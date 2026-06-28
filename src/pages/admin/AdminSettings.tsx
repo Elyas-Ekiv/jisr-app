@@ -177,7 +177,7 @@ export default function AdminSettings() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActive(tab.id)}
+                    onClick={() => setActive(tab.id as TabId)}
                     className={[
                       'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors',
                       isActive

@@ -1,10 +1,30 @@
 require('dotenv').config();
+const path = require('path');
+
+const parseCsv = (value) =>
+  (value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const nodeEnv = process.env.NODE_ENV || 'development';
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const publicBaseUrl = process.env.PUBLIC_BASE_URL || frontendUrl;
+const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
 
 const config = {
   // Server
-  port: process.env.PORT || 3000,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  port: parseInt(process.env.PORT, 10) || 3000,
+  nodeEnv,
+  frontendUrl,
+  /** Public site URL used for media links, emails, and payment redirects */
+  publicBaseUrl,
+  /** Trust X-Forwarded-* headers when behind nginx/Dokploy */
+  trustProxy: process.env.TRUST_PROXY === 'true' || nodeEnv === 'production',
+  /** Comma-separated allowed browser origins (defaults to FRONTEND_URL) */
+  corsOrigins: parseCsv(process.env.CORS_ORIGINS).length
+    ? parseCsv(process.env.CORS_ORIGINS)
+    : [frontendUrl],
 
   // Database
   databaseUrl: process.env.DATABASE_URL,
@@ -29,14 +49,14 @@ const config = {
   resendFromName: process.env.RESEND_FROM_NAME || 'Jisr',
 
   // File Upload
-  uploadDir: process.env.UPLOAD_DIR || './uploads',
-  maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 5242880, // 5MB
+  uploadDir,
+  maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 5242880, // 5MB
 
   // Rate Limiting
-  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
-  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 500,
-  rateLimitAuthMaxRequests: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS) || 20,
-  rateLimitPaymentMaxRequests: parseInt(process.env.RATE_LIMIT_PAYMENT_MAX_REQUESTS) || 10,
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 900000, // 15 minutes
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 500,
+  rateLimitAuthMaxRequests: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS, 10) || 20,
+  rateLimitPaymentMaxRequests: parseInt(process.env.RATE_LIMIT_PAYMENT_MAX_REQUESTS, 10) || 10,
 };
 
 // Validate required environment variables (only in production)

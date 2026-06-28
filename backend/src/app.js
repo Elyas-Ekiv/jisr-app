@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
 const config = require('./config/env');
+const prisma = require('./config/db');
 const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
@@ -25,13 +25,21 @@ const locationRoutes = require('./routes/location.routes');
 
 const app = express();
 
+if (config.trustProxy) {
+  app.set('trust proxy', 1);
+}
+
 // Security middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS configuration
 app.use(
   cors({
-    origin: config.nodeEnv === 'development' ? true : config.frontendUrl, // Allow all origins in dev (for Postman)
+    origin: config.nodeEnv === 'development' ? true : config.corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -58,15 +66,24 @@ app.use('/api/', apiLimiter);
 app.use('/uploads', (_req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
-}, express.static(path.join(__dirname, '../uploads')));
+}, express.static(config.uploadDir));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    message: 'Jisr API is running',
-    timestamp: new Date().toISOString(),
-  });
+// Health check (used by Docker / Dokploy)
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: 'ok',
+      message: 'Jisr API is running',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      message: 'Database unavailable',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // API Routes

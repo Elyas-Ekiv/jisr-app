@@ -1,8 +1,9 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const config = require('../config/env');
 
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/media');
+const UPLOAD_DIR = path.join(config.uploadDir, 'media');
 
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -22,7 +23,7 @@ const fileFilter = (_req, file, cb) => {
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: config.maxFileSize },
   fileFilter,
 });
 

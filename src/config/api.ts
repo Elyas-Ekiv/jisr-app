@@ -1,9 +1,13 @@
 /**
  * API Configuration
  * Base URL for backend API
+ *
+ * Production (Docker/nginx): defaults to same-origin `/api`
+ * Development: defaults to local backend on port 3000
  */
-
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
 
 /**
  * Get full API endpoint URL

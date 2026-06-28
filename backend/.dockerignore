@@ -1,0 +1,15 @@
+node_modules
+dist
+uploads
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+README.md
+SETUP_GUIDE.md
+PAYMENT_TESTING_GUIDE.md
+test-*.js
+ecosystem.config.js
+npm-debug.log*

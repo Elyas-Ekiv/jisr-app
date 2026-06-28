@@ -146,7 +146,7 @@ export default function LandingPage() {
               </div>
 
               <ul className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-600">
-                {L.heroBullets.map((item) => (
+                {L.heroBullets.map((item: string) => (
                   <li key={item} className="inline-flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4 text-primary-600" />
                     {item}
@@ -331,7 +331,7 @@ export default function LandingPage() {
           <SectionEyebrow text={L.pricingEyebrow}>{L.pricingHeading}</SectionEyebrow>
           <p className="mx-auto mt-4 max-w-2xl text-center text-ink-600">{L.pricingIntro}</p>
           <div className="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-3">
-            {L.pricingPlans.map((plan) => (
+            {L.pricingPlans.map((plan: { id: string; name: string; price: string; blurb: string }) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 12 }}

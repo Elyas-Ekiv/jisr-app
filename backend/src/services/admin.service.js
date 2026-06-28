@@ -693,10 +693,12 @@ const setUserRestrictions = async (id, restrictions) => {
 const path = require('path');
 const fs = require('fs');
 
+const config = require('../config/env');
+
 const MEDIA_BASE_URL = (req) =>
   req
     ? `${req.protocol}://${req.get('host')}/uploads/media`
-    : 'http://localhost:3000/uploads/media';
+    : `${config.publicBaseUrl.replace(/\/$/, '')}/uploads/media`;
 
 const listMediaAssets = async ({ search, category, active } = {}) => {
   const where = {};
@@ -736,7 +738,7 @@ const deleteMediaAsset = async (id) => {
   const existing = await prisma.mediaAsset.findUnique({ where: { id } });
   if (!existing) throw new AppError('Media asset not found', 404);
   // Remove physical file
-  const filePath = path.join(__dirname, '../../uploads/media', existing.filename);
+  const filePath = path.join(config.uploadDir, 'media', existing.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
